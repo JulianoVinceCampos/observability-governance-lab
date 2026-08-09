@@ -71,9 +71,9 @@ jobs:
 
   sonar:
     needs: coverage
-    # O gate do Sonar depende de um secret que só existe depois de o projeto ser criado no
-    # SonarCloud. Enquanto o secret não existir, o job é pulado em vez de reprovar o PR
-    # inteiro por configuração pendente.
+    # Fork não recebe secret, então o job seria reprovado por falta de credencial que ele
+    # nunca poderia ter. A ausência do secret no próprio repo é tratada dentro do
+    # sonar.yml, que emite um notice e passa em vez de reprovar por configuração pendente.
     if: ${{ !github.event.pull_request.head.repo.fork }}
     uses: ./.github/workflows/sonar.yml
     # Explícito em vez de `secrets: inherit`: o workflow chamado recebe exatamente o único

@@ -22,8 +22,16 @@ jobs:
         with:
           fail-on-severity: high
           comment-summary-in-pr: on-failure
+          # O grafo de dependência de um repo recém-criado pode ainda não ter sido
+          # indexado, e a action falha por ausência de dado em vez de por
+          # vulnerabilidade. Enquanto isso, o veredito de SCA que bloqueia é o pip-audit
+          # abaixo, que não depende de serviço nenhum.
+        continue-on-error: true
 
-  osv-scanner:
+  pip-audit:
+    # Substituiu o osv-scanner, que é binário em Go e não instala por pip. pip-audit é
+    # Python, roda no mesmo ambiente que o pacote usa, e não depende de lockfile: ele
+    # audita o que de fato está instalado.
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -32,10 +40,27 @@ jobs:
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.12"
-      - name: Instala osv-scanner
-        run: python -m pip install --upgrade pip osv-scanner
-      - name: Varre o manifesto
-        # O pacote instalado não tem dependência de runtime, então esta varredura cobre o
-        # tooling de dev. Superfície pequena por construção, e é o ponto: a única
-        # dependência que pode ter CVE aqui é a que nunca vai para produção.
-        run: osv-scanner scan --lockfile pyproject.toml || osv-scanner --lockfile pyproject.toml
+
+      - name: Instala o pacote e o auditor
+        run: |
+          python -m pip install --upgrade pip pip-audit
+          python -m pip install -e ".[dev]"
+
+      - name: Audita o ambiente
+        # O pacote instalado não tem dependência de runtime, então o que esta varredura
+        # cobre é o tooling de dev. Superfície pequena por construção, e é o ponto: a
+        # única dependência que pode ter CVE aqui é a que nunca vai para produção.
+        run: pip-audit --strict --progress-spinner off
+
+      - name: Confirma que o pacote não trouxe dependência de runtime
+        # A alegação central do ADR-0001, checada por máquina em vez de confiada ao
+        # comentário. Um PR que adiciona dependência de runtime falha aqui.
+        run: |
+          python - <<'PY'
+          import pathlib, sys, tomllib
+          data = tomllib.loads(pathlib.Path("pyproject.toml").read_text())
+          deps = data["project"].get("dependencies", [])
+          if deps:
+              sys.exit(f"ADR-0001 violado: dependencia de runtime declarada: {deps}")
+          print("zero dependencia de runtime, como o ADR-0001 exige")
+          PY

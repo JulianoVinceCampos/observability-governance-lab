@@ -318,7 +318,7 @@ estilo se corrige com um commit, identificador vazado em histórico público é 
 | build-test | matriz 3.11 a 3.13, gate pelo exit code nos dois fixtures, dashboard subindo |
 | coverage | cobertura com ratchet, o piso só sobe |
 | SAST | Semgrep com SARIF, CodeQL em Python e JavaScript, bloqueante |
-| SCA | dependency review e OSV, mais Dependabot agrupado semanal |
+| SCA | pip-audit no ambiente real, dependency review no PR, Dependabot agrupado semanal, e checagem por máquina de que o ADR-0001 não foi violado |
 | sonar | quality gate com `qualitygate.wait=true`, senão o gate é decorativo |
 | docker | build do zero, healthcheck, e checagem de usuário não-root |
 | supply chain | SBOM CycloneDX, atestação de proveniência, Scorecard |
