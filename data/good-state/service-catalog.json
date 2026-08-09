@@ -1,0 +1,33 @@
+[
+  {
+    "name": "app-tier-node",
+    "tier": "critical",
+    "owner": "platform-team",
+    "depends_on": ["rdbms-primary"],
+    "signals": [
+      "app_tier.latency_ms",
+      "app_tier.requests_total",
+      "app_tier.errors_total",
+      "app_tier.pool_active"
+    ]
+  },
+  {
+    "name": "edge-proxy",
+    "tier": "critical",
+    "owner": "platform-team",
+    "depends_on": [],
+    "signals": [
+      "edge_proxy.latency_ms",
+      "edge_proxy.requests_total",
+      "edge_proxy.errors_total",
+      "edge_proxy.conn_dropped_per_s"
+    ]
+  },
+  {
+    "name": "rdbms-primary",
+    "tier": "standard",
+    "owner": "dba-team",
+    "depends_on": [],
+    "signals": ["rdbms.cpu_pct", "rdbms.connections_active"]
+  }
+]

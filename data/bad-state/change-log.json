@@ -1,0 +1,31 @@
+{
+  "problems": [
+    {
+      "signature": "app-tier-node cascade query storm",
+      "incident_refs": ["INC-1001", "INC-1014", "INC-1032"],
+      "workaround": "",
+      "postmortem_ref": ""
+    }
+  ],
+  "changes": [
+    {
+      "service": "app-tier-node",
+      "deploy_marker_emitted": false,
+      "rollback_signal": "",
+      "verification_window_hours": null
+    }
+  ],
+  "watchdogs": [],
+  "retention": [
+    { "signal": "app_tier.errors_total", "retention_days": 30 }
+  ],
+  "collector_attributes": [
+    { "name": "service.name", "otel_semantic": true },
+    { "name": "message", "otel_semantic": false }
+  ],
+  "cardinality_budgets": [
+    { "metric": "app_tier.latency_ms", "max_series": null }
+  ],
+  "trace_id_correlation_verified": false,
+  "maturity_history": []
+}

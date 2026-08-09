@@ -1,0 +1,23 @@
+[
+  {
+    "id": "RB-001",
+    "title": "App tier cascade query storm",
+    "resolves": ["ALR-001"],
+    "last_tested_days_ago": 20,
+    "test_window_days": 90
+  },
+  {
+    "id": "RB-002",
+    "title": "Edge proxy connection saturation",
+    "resolves": ["ALR-002"],
+    "last_tested_days_ago": 30,
+    "test_window_days": 90
+  },
+  {
+    "id": "RB-003",
+    "title": "RDBMS primary CPU saturation",
+    "resolves": ["ALR-003"],
+    "last_tested_days_ago": 12,
+    "test_window_days": 90
+  }
+]

@@ -1,0 +1,17 @@
+# Subir o dashboard local sem instalar nada além do Docker:
+#     docker compose up --build     ->  http://127.0.0.1:8000
+services:
+  dashboard:
+    build: .
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      PORT: "8000"
+      # Credencial da demo. Sobrescreva aqui para testar outro par sem editar código.
+      OBSGOV_USER: julianovincedecampos
+      OBSGOV_PASSWORD: observability-governance-lab
+    # Monte o seu próprio inventário sobre /app/data para avaliar configuração real. O
+    # volume é somente leitura: a ferramenta nunca escreve no inventário.
+    # volumes:
+    #   - ./meu-inventario:/app/data:ro
+    restart: unless-stopped

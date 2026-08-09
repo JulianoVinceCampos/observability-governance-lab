@@ -1,0 +1,26 @@
+[
+  {
+    "id": "ALR-001",
+    "service": "app-tier-node",
+    "metric": "app_tier.errors_total",
+    "severity": "page",
+    "runbook_ref": "RB-001",
+    "owner": "platform-team"
+  },
+  {
+    "id": "ALR-002",
+    "service": "edge-proxy",
+    "metric": "edge_proxy.conn_dropped_per_s",
+    "severity": "critical",
+    "runbook_ref": "RB-002",
+    "owner": "platform-team"
+  },
+  {
+    "id": "ALR-003",
+    "service": "rdbms-primary",
+    "metric": "rdbms.cpu_pct",
+    "severity": "warning",
+    "runbook_ref": "RB-003",
+    "owner": "dba-team"
+  }
+]

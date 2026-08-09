@@ -1,0 +1,28 @@
+[
+  {
+    "service": "app-tier-node",
+    "sli_name": "availability",
+    "sli_metric": "app_tier.errors_total",
+    "target_pct": 99.5,
+    "window_days": 30,
+    "owner": "",
+    "review_cadence_days": 0,
+    "error_budget": { "consequence": "" },
+    "burn_rate_alert": false,
+    "evidence_ref": "",
+    "consumer_measured": false
+  },
+  {
+    "service": "edge-proxy",
+    "sli_name": "latency",
+    "sli_metric": "edge_proxy.latency_ms",
+    "target_pct": 99.0,
+    "window_days": 30,
+    "owner": "platform-team",
+    "review_cadence_days": 30,
+    "error_budget": { "consequence": "" },
+    "burn_rate_alert": false,
+    "evidence_ref": "",
+    "consumer_measured": false
+  }
+]

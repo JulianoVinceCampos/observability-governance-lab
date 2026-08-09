@@ -1,0 +1,43 @@
+{
+  "problems": [
+    {
+      "signature": "app-tier-node cascade query storm",
+      "incident_refs": ["INC-1001", "INC-1014", "INC-1032"],
+      "workaround": "manually kill the long-running query and restart the connection pool",
+      "postmortem_ref": "postmortem:2026-06-app-tier-cascade"
+    }
+  ],
+  "changes": [
+    {
+      "service": "app-tier-node",
+      "deploy_marker_emitted": true,
+      "rollback_signal": "app_tier.errors_total burn-rate alert",
+      "verification_window_hours": 2
+    },
+    {
+      "service": "edge-proxy",
+      "deploy_marker_emitted": true,
+      "rollback_signal": "edge_proxy.conn_dropped_per_s burn-rate alert",
+      "verification_window_hours": 1
+    }
+  ],
+  "watchdogs": [
+    { "name": "pipeline-heartbeat", "monitors": ["collector", "backend-ingest"], "heartbeat_interval_minutes": 5 }
+  ],
+  "retention": [
+    { "signal": "app_tier.errors_total", "retention_days": 180 },
+    { "signal": "edge_proxy.latency_ms", "retention_days": 180 }
+  ],
+  "collector_attributes": [
+    { "name": "service.name", "otel_semantic": true },
+    { "name": "deployment.environment", "otel_semantic": true },
+    { "name": "trace_id", "otel_semantic": true },
+    { "name": "span_id", "otel_semantic": true }
+  ],
+  "cardinality_budgets": [
+    { "metric": "app_tier.latency_ms", "max_series": 500 },
+    { "metric": "edge_proxy.latency_ms", "max_series": 500 }
+  ],
+  "trace_id_correlation_verified": true,
+  "maturity_history": []
+}

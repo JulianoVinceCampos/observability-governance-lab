@@ -1,0 +1,19 @@
+# Blueprint de deploy. O Render lê este arquivo e cria o serviço sozinho.
+#
+# A porta não aparece aqui de propósito: a plataforma injeta PORT e o default da CLI lê
+# PORT do ambiente. Um número fixo aqui seria uma segunda fonte de verdade.
+services:
+  - type: web
+    name: observability-governance-lab
+    runtime: docker
+    plan: free
+    region: oregon
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: OBSGOV_USER
+        value: julianovincedecampos
+      # sync: false mantém o valor fora do repositório, preenchido no painel. O default
+      # do código continua valendo se nada for definido.
+      - key: OBSGOV_PASSWORD
+        sync: false

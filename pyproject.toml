@@ -1,0 +1,74 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "observability-governance-lab"
+version = "0.1.0"
+description = "Turns declared observability config (SLOs, alerts, runbooks) into an auditable ITIL/COBIT compliance verdict."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+authors = [{ name = "Juliano Vince" }]
+keywords = ["sre", "observability", "slo", "itil", "cobit", "governance", "compliance", "otel"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: System Administrators",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: System :: Monitoring",
+]
+# Zero runtime dependencies, same rationale as postmortem-miner ADR-0001: the gate
+# has to run on a clean box, including inside CI before anything else is installed.
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3",
+  "pytest-cov>=6.0",
+  "ruff==0.8.4",
+]
+
+[project.scripts]
+obsgov = "obsgov.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/JulianoVinceCampos/observability-governance-lab"
+Issues = "https://github.com/JulianoVinceCampos/observability-governance-lab/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/obsgov"]
+# O bundle web (index.html, app.js, styles.css) não é código Python, então precisa ser
+# declarado como artefato ou o wheel sai sem o dashboard.
+artifacts = ["src/obsgov/web/*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests", "tools"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "C4", "RET", "PTH", "ARG", "PL", "RUF"]
+ignore = ["PLR0913"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["obsgov", "sanitize_scan"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["PLR2004", "ARG001", "E501"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-q --strict-markers --strict-config"
+testpaths = ["tests"]
+pythonpath = ["src", "tools"]
+
+[tool.coverage.run]
+branch = true
+source = ["src/obsgov"]
+
+[tool.coverage.report]
+show_missing = true
+exclude_lines = ["pragma: no cover", "if __name__ == .__main__.:", "raise NotImplementedError"]
