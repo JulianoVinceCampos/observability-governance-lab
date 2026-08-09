@@ -1,0 +1,69 @@
+name: supply-chain
+
+on:
+  workflow_call:
+
+# Teto, não default: precisa cobrir o que o job pede.
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+
+jobs:
+  sbom-and-provenance:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+
+      - name: Build do wheel e do sdist
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build
+
+      - name: O wheel carrega o bundle web
+        # O bundle não é código Python, então depende de `artifacts` no pyproject. Sem esta
+        # checagem, um wheel sem dashboard passa e só quebra no deploy.
+        run: |
+          python -m pip install --upgrade wheel
+          python - <<'PY'
+          import pathlib, sys, zipfile
+          wheels = list(pathlib.Path("dist").glob("*.whl"))
+          if not wheels:
+              sys.exit("nenhum wheel em dist/")
+          nomes = zipfile.ZipFile(wheels[0]).namelist()
+          exigidos = ["obsgov/web/index.html", "obsgov/web/app.js", "obsgov/web/styles.css"]
+          faltando = [e for e in exigidos if not any(n.endswith(e) for n in nomes)]
+          if faltando:
+              sys.exit(f"wheel sem o bundle web: {faltando}")
+          print(f"wheel {wheels[0].name} carrega o bundle web completo")
+          PY
+
+      - name: SBOM (CycloneDX)
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+        with:
+          format: cyclonedx-json
+          artifact-name: observability-governance-lab-sbom.cyclonedx.json
+          output-file: sbom.cyclonedx.json
+
+      - name: Atestação de proveniência do build
+        # Faz `gh attestation verify` funcionar contra os artefatos publicados: qualquer
+        # pessoa confirma qual commit e qual workflow os produziu.
+        uses: actions/attest-build-provenance@ef244123eb79f2f7a7e75d99086184180e6d0018 # v1
+        with:
+          subject-path: "dist/*"
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: dist-and-sbom
+          path: |
+            dist/*
+            sbom.cyclonedx.json
+          retention-days: 14

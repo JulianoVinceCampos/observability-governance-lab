@@ -1,0 +1,29 @@
+title = "observability-governance-lab"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = """
+Placeholders documentados, usados pelos fixtures sintéticos e pelos testes. Toda entrada
+aqui é um valor escolhido justamente porque nunca pode ser real: faixas de documentação do
+RFC 5737, identificadores todos-zero, e a credencial da demo, que está no README de
+propósito e não protege dado nenhum.
+"""
+regexes = [
+  '''000000000000''',
+  '''i-0EXAMPLE''',
+  '''(?:192\.0\.2|198\.51\.100|203\.0\.113)\.\d{1,3}''',
+  # Credencial do portão de demonstração. Pública por design: o dataset é sintético e
+  # read-only. Trocada por variável de ambiente em qualquer uso real.
+  '''observability-governance-lab''',
+  # Segredos fixos usados nos testes, para a sessão ser determinística.
+  '''segredo-de-teste-fixo''',
+  '''segredo-de-teste-http''',
+]
+paths = [
+  # O scanner e as regras contêm os padrões por definição.
+  '''tools/sanitize_scan\.py''',
+  '''\.semgrep/.*''',
+  '''\.gitleaks\.toml''',
+]

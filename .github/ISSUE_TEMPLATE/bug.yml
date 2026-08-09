@@ -1,0 +1,51 @@
+name: Bug
+description: Algo que não funciona como o README diz
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: esperado
+    attributes:
+      label: O que você esperava
+    validations:
+      required: true
+
+  - type: textarea
+    id: aconteceu
+    attributes:
+      label: O que aconteceu
+      description: Cole a saída completa, não o resumo dela.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduzir
+    attributes:
+      label: Como reproduzir
+      description: >
+        O comando exato. Se envolve inventário próprio, diga qual campo está no formato
+        que quebrou (sem colar dado real de sistema nenhum).
+      render: shell
+    validations:
+      required: true
+
+  - type: input
+    id: python
+    attributes:
+      label: Versão do Python
+      placeholder: "3.11, 3.12 ou 3.13 (saída de python3 --version)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: interface
+    attributes:
+      label: Onde
+      options:
+        - CLI (validate, score, report)
+        - Dashboard (obsgov serve)
+        - Container (docker compose)
+        - Outro
+    validations:
+      required: true

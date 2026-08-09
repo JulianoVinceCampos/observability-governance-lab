@@ -1,0 +1,108 @@
+# Três estágios: barato e irreversível primeiro, caro em paralelo, evidência no fim.
+#
+# `sanitize` roda antes de `lint` de propósito. Violação de estilo se corrige com um
+# commit; identificador vazado em histórico público é permanente. Então a checagem que
+# protege o erro irreversível é a que roda primeiro e falha mais rápido.
+name: pr-ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# O bloco no nível do workflow é um TETO, não um default: um job não escala acima dele, e
+# o workflow todo se recusa a iniciar se algum tentar. Então isto é a união do que os jobs
+# abaixo precisam, e cada job depois estreita para o próprio mínimo.
+permissions:
+  contents: read
+  security-events: write
+  id-token: write
+  attestations: write
+  pull-requests: write
+  actions: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # --- estágio 1: falha rápido, sequencial ----------------------------------------
+  sanitize:
+    uses: ./.github/workflows/sanitize.yml
+
+  lint:
+    needs: sanitize
+    uses: ./.github/workflows/lint.yml
+
+  build-test:
+    needs: lint
+    uses: ./.github/workflows/build-test.yml
+
+  # --- estágio 2: paralelo --------------------------------------------------------
+  coverage:
+    needs: build-test
+    uses: ./.github/workflows/coverage.yml
+
+  semgrep:
+    needs: build-test
+    uses: ./.github/workflows/semgrep.yml
+    permissions:
+      contents: read
+      security-events: write
+
+  codeql:
+    needs: build-test
+    uses: ./.github/workflows/codeql.yml
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+
+  sca:
+    needs: build-test
+    uses: ./.github/workflows/sca.yml
+    permissions:
+      contents: read
+      pull-requests: write
+
+  docker:
+    needs: build-test
+    uses: ./.github/workflows/docker.yml
+
+  sonar:
+    needs: coverage
+    # Fork não recebe secret, então o job seria reprovado por falta de credencial que ele
+    # nunca poderia ter. A ausência do secret no próprio repo é tratada dentro do
+    # sonar.yml, que emite um notice e passa em vez de reprovar por configuração pendente.
+    if: ${{ !github.event.pull_request.head.repo.fork }}
+    uses: ./.github/workflows/sonar.yml
+    # Explícito em vez de `secrets: inherit`: o workflow chamado recebe exatamente o único
+    # secret de que precisa. `inherit` entrega todos os secrets do repo, que é como um
+    # workflow reutilizável comprometido exfiltra o resto deles.
+    secrets:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  # --- estágio 3: evidência -------------------------------------------------------
+  supply-chain:
+    needs: [coverage, semgrep, codeql, sca, docker]
+    uses: ./.github/workflows/supply-chain.yml
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+
+  ci-status:
+    # Um único check para exigir na branch protection, então adicionar um job depois não
+    # significa editar o ruleset.
+    needs: [sanitize, lint, build-test, coverage, semgrep, codeql, sca, docker, sonar, supply-chain]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reprova se algum job anterior não teve sucesso
+        # `skipped` é aceito de propósito: sonar e dependency-review são pulados por
+        # configuração pendente ou por não ser PR, e nenhum dos dois é falha.
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: |
+          echo "um ou mais estágios do pipeline falharam"
+          exit 1
+      - run: echo "pipeline verde"

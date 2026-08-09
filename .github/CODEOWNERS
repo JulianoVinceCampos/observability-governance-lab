@@ -1,0 +1,17 @@
+# Dono de tudo por default.
+*                               @JulianoVinceCampos
+
+# Áreas onde uma mudança carrega mais consequência que o resto, listadas para que a
+# revisão seja explícita e não por acidente:
+#
+#   evaluator.py  o catálogo e a regra de teto são a tese do projeto
+#   tools/        os gates. Um gate mal editado passa a aprovar tudo em silêncio
+#   .github/      a esteira. Um typo aqui desliga uma camada sem avisar
+#   .semgrep/     as regras de vazamento, que protegem o irreversível
+#   docs/adr/     ADR é imutável: mudança gera ADR novo, não edição
+src/obsgov/evaluator.py         @JulianoVinceCampos
+tools/                          @JulianoVinceCampos
+.github/                        @JulianoVinceCampos
+.semgrep/                       @JulianoVinceCampos
+.gitleaks.toml                  @JulianoVinceCampos
+docs/adr/                       @JulianoVinceCampos

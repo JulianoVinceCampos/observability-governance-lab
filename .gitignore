@@ -11,3 +11,5 @@ dist/
 build/
 *.egg-info/
 out/
+requirements-audit.txt
+requirements-audit.txt
