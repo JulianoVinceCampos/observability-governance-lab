@@ -175,7 +175,17 @@ mentir.
 ## Dashboard
 
 O markdown responde bem "qual é o estado deste inventário". Responde mal "o que acontece
-se eu tirar o runbook deste alerta". Para isso existe uma tela:
+se eu tirar o runbook deste alerta". Para isso existe uma tela.
+
+**Demo ao vivo: https://observability-governance-lab-v8yr.onrender.com**
+
+Usuário `julianovincedecampos`, senha `observability-governance-lab`. A credencial é
+pública de propósito e é o default do código: o portão existe para a tela não servir dado
+sem sessão, e o dado por trás dele é sintético e somente leitura. A instância roda no
+plano free do Render e hiberna sem uso, então o primeiro acesso pode levar perto de 50
+segundos para acordar.
+
+Local, com o pacote instalado:
 
 ```bash
 obsgov serve data          # http://127.0.0.1:8000
@@ -222,8 +232,13 @@ docker compose up --build      # http://127.0.0.1:8000
 
 A imagem não tem etapa de resolução de dependência, porque não há dependência a resolver.
 Roda como usuário não-root e traz `HEALTHCHECK` batendo em `/api/health`. O blueprint do
-Render (`render.yaml`) acompanha o repositório, com auto-deploy no push. A porta não está
+Render (`render.yaml`) acompanha o repositório, com auto-deploy no push, e é o que sustenta
+a [demo ao vivo](https://observability-governance-lab-v8yr.onrender.com). A porta não está
 fixada em lugar nenhum: a plataforma injeta `PORT` e o default da CLI lê do ambiente.
+
+`OBSGOV_PASSWORD` está declarado com `sync: false`, então o valor fica fora do repositório
+e vem do painel da plataforma. Na demo o campo é deixado vazio de propósito, e aí vale o
+default do código, que é a credencial publicada acima.
 
 Monte o seu próprio inventário sobre `/app/data` para avaliar configuração real. O volume
 é somente leitura, a ferramenta nunca escreve no inventário.
