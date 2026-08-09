@@ -29,13 +29,13 @@ jobs:
             echo "configurado=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: steps.guard.outputs.configurado == 'true'
         with:
           # O Sonar precisa do histórico para atribuir código novo ao autor e à data.
           fetch-depth: 0
 
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         if: steps.guard.outputs.configurado == 'true'
         with:
           python-version: "3.12"
@@ -52,6 +52,6 @@ jobs:
         # O sonar-project.properties tem qualitygate.wait=true. Sem isso o step fica verde
         # antes de o Sonar terminar, e o gate é decorativo.
         if: steps.guard.outputs.configurado == 'true'
-        uses: SonarSource/sonarqube-scan-action@8c71dc039c2dd71d3821e89a2b58ecc7fee6ced9 # v5
+        uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f # v5
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
