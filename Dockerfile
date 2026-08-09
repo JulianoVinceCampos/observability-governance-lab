@@ -1,6 +1,6 @@
 # Imagem sem etapa de resolução de dependência, porque não há dependência de runtime a
 # resolver (ADR-0001). O resultado é um build que não fala com índice de pacote nenhum.
-FROM python:3.13-slim
+FROM python:3.14-slim
 
 # Não escrever .pyc e não bufferizar stdout: log de container tem que sair na hora.
 ENV PYTHONDONTWRITEBYTECODE=1 \
