@@ -1,0 +1,32 @@
+version: 2
+updates:
+  # As actions são pinadas por SHA, que é requisito do Scorecard. Pin por SHA sem
+  # atualização automática vira dívida silenciosa: o Dependabot mantém o SHA em dia e o
+  # comentário de versão junto.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: "chore"
+
+  # Só dev-dependency existe aqui: o pacote instalado não tem dependência de runtime.
+  - package-ecosystem: pip
+    directory: "/"
+    schedule:
+      interval: weekly
+    groups:
+      dev:
+        patterns: ["*"]
+    commit-message:
+      prefix: "chore"
+
+  - package-ecosystem: docker
+    directory: "/"
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "chore"

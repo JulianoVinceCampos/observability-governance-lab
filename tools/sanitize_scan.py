@@ -21,7 +21,16 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
-SELF_EXEMPT = {"tools/sanitize_scan.py"}
+# Arquivos que contêm os padrões por definição: o scanner, as regras, e o teste que prova
+# que cada regra pega o que deveria. Sem a exceção do teste, o gate reprova a suíte que o
+# valida, e a saída fica: ou o teste é fraco (não usa padrão realista) ou o gate é
+# ignorado. Nenhuma das duas é aceitável.
+SELF_EXEMPT = {
+    "tools/sanitize_scan.py",
+    ".semgrep/no-corp-leak.yml",
+    ".gitleaks.toml",
+    "tests/test_tools.py",
+}
 
 SKIP_DIRS = {
     ".git",

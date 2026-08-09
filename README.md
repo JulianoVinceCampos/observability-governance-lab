@@ -1,11 +1,14 @@
 # observability-governance-lab
 
+[![pr-ci](https://github.com/JulianoVinceCampos/observability-governance-lab/actions/workflows/pr-ci.yml/badge.svg)](https://github.com/JulianoVinceCampos/observability-governance-lab/actions/workflows/pr-ci.yml)
+[![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=JulianoVinceCampos_observability-governance-lab&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=JulianoVinceCampos_observability-governance-lab)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=JulianoVinceCampos_observability-governance-lab&metric=coverage)](https://sonarcloud.io/summary/new_code?id=JulianoVinceCampos_observability-governance-lab)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/JulianoVinceCampos/observability-governance-lab/badge)](https://scorecard.dev/viewer/?uri=github.com/JulianoVinceCampos/observability-governance-lab)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 **Transforma a configuração declarada de observabilidade num verdict de compliance
 auditável, mapeado para práticas ITIL 4 e objetivos COBIT 2019, como controle
 executável em vez de documento.**
-
-Status: motor, catálogo de controles, fixtures sintéticos e dashboard web. Ainda sem
-badge de CI, porque a esteira ainda não está ligada.
 
 ```bash
 docker compose up --build      # http://127.0.0.1:8000
@@ -96,11 +99,61 @@ formato.
 
 ## Como funciona
 
+```mermaid
+flowchart LR
+    subgraph fontes["Fontes declaradas (JSON versionado)"]
+        SC["service-catalog<br/>serviço, tier, dono, sinais"]
+        SLO["slo<br/>SLI, alvo, janela, error budget"]
+        ALR["alerts<br/>regra, severidade, runbook"]
+        RB["runbooks<br/>resolve o quê, último teste"]
+        CL["change-log<br/>problema, mudança, watchdog"]
+    end
+
+    LOAD["loader<br/>valida e monta"]
+    INV["Inventory"]
+    EVAL["evaluator<br/>30 controles puros"]
+    RES["ControlResult<br/>PASS · FAIL · SKIP · WAIVED"]
+    SCORE["score_practice<br/>regra de teto"]
+
+    subgraph saidas["Saídas"]
+        GATE["obsgov validate<br/>exit 1 em MUST reprovado"]
+        WEB["obsgov serve<br/>dashboard"]
+        REP["obsgov report<br/>markdown · JSON · SARIF"]
+    end
+
+    fontes --> LOAD --> INV --> EVAL --> RES --> SCORE
+    SCORE --> GATE & WEB & REP
+
+    WAIV["waivers.json<br/>dono e validade"] -.-> EVAL
 ```
-JSON declarado ──▶ Inventory ──▶ 30 controles ──▶ ControlResult ──▶ maturidade por prática
- (5 fontes)          (loader)     (evaluator)       PASS/FAIL/         (score_practice,
-                                                     SKIP/WAIVED         regra de teto)
+
+O ponto de desenho que sustenta a tese: cada controle é uma função pura
+`Inventory -> Verdict`. Não faz I/O, não altera o inventário, e não chama probe no meio
+da checagem. Isso mantém todo controle testável isoladamente e torna a avaliação
+determinística: mesmo inventário, mesmo verdict.
+
+### A regra de teto, que é o que impede o score de mentir
+
+```mermaid
+flowchart TD
+    START["controles de uma prática"] --> Q1{"algum MUST<br/>reprovado?"}
+    Q1 -->|sim| CAP["nível 1<br/>e o controle causador é nomeado"]
+    Q1 -->|não| Q2{"todo MUST<br/>passou, waived<br/>ou skip?"}
+    Q2 -->|não| L1["nível 1"]
+    Q2 -->|sim| Q3{"todo SHOULD<br/>resolvido?"}
+    Q3 -->|não| L2["nível 2"]
+    Q3 -->|sim| L3["nível 3<br/>verificado por automação"]
+    L3 --> Q4{"todo MAY<br/>resolvido?"}
+    Q4 -->|sim| L4["nível 4<br/>com tendência medida"]
+    Q4 -->|não| L3
+
+    CAP:::fail
+    L1:::fail
+    classDef fail fill:#fdeaed,stroke:#c4283f,color:#8f1e2f
 ```
+
+Vinte caixinhas verdes não vencem uma obrigatória quebrada. Um score que não consegue
+ficar baixo não mede nada.
 
 **O avaliador não confia no arquivo declarado.** No M1, um sinal cujo nome bate com o
 sentinela `UNVERIFIED_METRIC` é tratado como morto, seguindo a mesma disciplina de "só
@@ -245,8 +298,33 @@ make cov       # testes com coverage
 |---|---|
 | [NOTICE.md](NOTICE.md) | Aviso de marca ITIL®/COBIT®, ler antes de assumir qualquer coisa sobre alegação de conformidade |
 | [docs/controls.md](docs/controls.md) | Catálogo completo de controles: severidade, mapeamento COBIT, remediação |
+| [docs/componentes.md](docs/componentes.md) | Os componentes, os diagramas, e o que cada aresta garante |
 | [ADR-0001](docs/adr/ADR-0001-zero-runtime-dependencies.md) | Por que zero dependência de runtime |
 | [ADR-0002](docs/adr/ADR-0002-dashboard-na-stdlib.md) | Por que o dashboard também é standard library, e o que isso custou |
+| [SECURITY.md](SECURITY.md) | Política de segurança e as camadas de defesa, com as limitações declaradas |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Como contribuir e o que o CI exige |
+| [CHANGELOG.md](CHANGELOG.md) | Histórico de versões |
+
+## A esteira
+
+Dez camadas, em três estágios. `sanitize` roda antes de `lint` de propósito: violação de
+estilo se corrige com um commit, identificador vazado em histórico público é permanente.
+
+| Camada | O que faz |
+|---|---|
+| pre-commit | higiene, ruff, gitleaks, conventional commit, sanitize |
+| sanitize | duas engines independentes mais gitleaks em todo o histórico |
+| lint | ruff, actionlint, e checagem de que `docs/controls.md` não divergiu do catálogo |
+| build-test | matriz 3.11 a 3.13, gate pelo exit code nos dois fixtures, dashboard subindo |
+| coverage | cobertura com ratchet, o piso só sobe |
+| SAST | Semgrep com SARIF, CodeQL em Python e JavaScript, bloqueante |
+| SCA | dependency review e OSV, mais Dependabot agrupado semanal |
+| sonar | quality gate com `qualitygate.wait=true`, senão o gate é decorativo |
+| docker | build do zero, healthcheck, e checagem de usuário não-root |
+| supply chain | SBOM CycloneDX, atestação de proveniência, Scorecard |
+
+O job `ci-status` agrega tudo num único check, então exigir na branch protection não
+significa editar o ruleset a cada job novo.
 
 ## Licença
 

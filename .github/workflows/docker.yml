@@ -1,0 +1,58 @@
+# Camada que prova a alegação do item 12 do DoD: reprodutibilidade em máquina limpa, não
+# "funciona aqui". O build acontece num runner sem nada instalado, e o container tem que
+# responder de verdade.
+name: docker
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Lint do Dockerfile
+        uses: hadolint/hadolint-action@54c9adbab1582c2ef04b2016b760714a4bfde3cf # v3.1.0
+        with:
+          dockerfile: Dockerfile
+
+      - name: Build
+        # Sem cache de propósito neste job: o ponto é provar que o build funciona do zero.
+        run: docker build -t obsgov:ci .
+
+      - name: Sobe e espera o healthcheck
+        run: |
+          docker run -d --name obsgov-ci -p 8000:8000 -e PORT=8000 obsgov:ci
+          for _ in $(seq 1 40); do
+            estado=$(docker inspect -f '{{.State.Health.Status}}' obsgov-ci 2>/dev/null || echo starting)
+            [ "$estado" = "healthy" ] && break
+            sleep 2
+          done
+          estado=$(docker inspect -f '{{.State.Health.Status}}' obsgov-ci)
+          echo "healthcheck: $estado"
+          test "$estado" = "healthy" || { docker logs obsgov-ci; exit 1; }
+
+      - name: O container serve o dashboard
+        run: |
+          curl -fsS http://127.0.0.1:8000/api/health | grep -q '"status": "ok"'
+          curl -fsS http://127.0.0.1:8000/ | grep -q '<!DOCTYPE html>'
+          curl -fsS http://127.0.0.1:8000/app.js > /dev/null
+          curl -fsS http://127.0.0.1:8000/styles.css > /dev/null
+          code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8000/api/state/bad-state/scorecard)
+          test "$code" = "401" || { echo "endpoint protegido devolveu $code, esperado 401"; exit 1; }
+
+      - name: Roda como usuário não-root
+        run: |
+          uid=$(docker exec obsgov-ci id -u)
+          echo "uid dentro do container: $uid"
+          test "$uid" != "0" || { echo "container rodando como root"; exit 1; }
+
+      - name: Logs e limpeza
+        if: always()
+        run: |
+          docker logs obsgov-ci 2>&1 | tail -20 || true
+          docker rm -f obsgov-ci || true
