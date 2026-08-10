@@ -179,17 +179,22 @@ se eu tirar o runbook deste alerta". Para isso existe uma tela.
 
 **Demo ao vivo: https://observability-governance-lab-v8yr.onrender.com**
 
-Usuário `julianovincedecampos`, senha `observability-governance-lab`. A credencial é
-pública de propósito e é o default do código: o portão existe para a tela não servir dado
-sem sessão, e o dado por trás dele é sintético e somente leitura. A instância roda no
-plano free do Render e hiberna sem uso, então o primeiro acesso pode levar perto de 50
-segundos para acordar.
+Usuário `julianovincedecampos`, senha `2428c89d847bdae39201d42fd1bb8c8d`.
+
+A credencial aparece publicada de propósito. O portão de sessão existe para a tela não
+entregar dado sem autenticar, não para proteger segredo: o inventário por trás dele é
+sintético e somente leitura, e a senha foi gerada só para esta instância, sem
+reaproveitamento. A instância roda no plano free do Render e hiberna sem uso, então o
+primeiro acesso pode levar perto de 50 segundos para acordar.
 
 Local, com o pacote instalado:
 
 ```bash
 obsgov serve data          # http://127.0.0.1:8000
 ```
+
+Sem nenhuma variável no ambiente vale o default do código, `julianovincedecampos` e
+`observability-governance-lab`, então a tela sobe sem configurar nada.
 
 Seis views, na ordem em que a pergunta aparece:
 
@@ -236,9 +241,11 @@ Render (`render.yaml`) acompanha o repositório, com auto-deploy no push, e é o
 a [demo ao vivo](https://observability-governance-lab-v8yr.onrender.com). A porta não está
 fixada em lugar nenhum: a plataforma injeta `PORT` e o default da CLI lê do ambiente.
 
-`OBSGOV_PASSWORD` está declarado com `sync: false`, então o valor fica fora do repositório
-e vem do painel da plataforma. Na demo o campo é deixado vazio de propósito, e aí vale o
-default do código, que é a credencial publicada acima.
+`OBSGOV_PASSWORD` está declarado com `sync: false`, então o valor nunca entra no
+repositório: ele é preenchido no painel da plataforma. O que está publicado na seção do
+dashboard é a senha desta demo específica, escrita ali porque um link de demonstração que
+ninguém consegue abrir não demonstra nada. O mecanismo continua sendo o mesmo que serve
+para secret de verdade.
 
 Monte o seu próprio inventário sobre `/app/data` para avaliar configuração real. O volume
 é somente leitura, a ferramenta nunca escreve no inventário.

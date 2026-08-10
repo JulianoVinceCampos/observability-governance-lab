@@ -17,6 +17,10 @@ regexes = [
   # Credencial do portão de demonstração. Pública por design: o dataset é sintético e
   # read-only. Trocada por variável de ambiente em qualquer uso real.
   '''observability-governance-lab''',
+  # Senha da instância pública da demo, publicada no README de propósito para o link ser
+  # utilizável. Vale só para aquela instância, sobre dado sintético e somente leitura, e
+  # não abre nada além da tela. Se a instância for trocada, esta entrada sai junto.
+  '''2428c89d847bdae39201d42fd1bb8c8d''',
   # Segredos fixos usados nos testes, para a sessão ser determinística.
   '''segredo-de-teste-fixo''',
   '''segredo-de-teste-http''',
