@@ -15,7 +15,12 @@
      SKIP    cinza,   tracejado     ausência de dado, nunca aprovação
 
    Cor nunca carrega significado sozinha: cada estado tem glifo, rótulo textual e
-   tratamento de borda distintos, então funciona em monocromático e para daltônicos. */
+   tratamento de borda distintos, então funciona em monocromático e para daltônicos.
+
+   SEGUNDA decisão de design: a navegação é NUMERADA (1 a 6), não um menu plano de seis
+   itens do mesmo peso. Cada número é a ordem em que a pergunta aparece na cabeça de quem
+   está avaliando conformidade: primeiro "passa ou não passa", só depois "onde não estou
+   olhando". Ordem visível é o que estava faltando, não densidade de informação. */
 
 :root {
   /* superfícies e tinta */
@@ -62,11 +67,13 @@
 
   --radius: 12px;
   --radius-sm: 8px;
+  --radius-lg: 16px;
   --shadow-sm: 0 1px 2px rgba(11, 27, 58, .06), 0 1px 3px rgba(11, 27, 58, .05);
   --shadow-md: 0 4px 14px rgba(11, 27, 58, .08), 0 2px 6px rgba(11, 27, 58, .05);
   --shadow-lg: 0 10px 30px rgba(11, 27, 58, .12);
 
-  --sidebar: 250px;
+  --sidebar: 268px;
+  --topbar: 60px;
 }
 
 /* O atributo hidden precisa vencer qualquer display de autor, senão um elemento com
@@ -210,6 +217,7 @@ a { color: var(--brand); }
 }
 .btn-primary:hover { background: var(--brand-deep); border-color: var(--brand-deep); }
 
+.btn-sm { padding: 6px 11px; font-size: 12.5px; }
 .btn-block { width: 100%; padding: 11px; margin-top: 8px; }
 
 .gate-hint {
@@ -233,22 +241,29 @@ a { color: var(--brand); }
 
 /* ---------------------------------------------------------------------- estrutura */
 
-.app { display: grid; grid-template-columns: var(--sidebar) 1fr; min-height: 100vh; }
+.app {
+  display: grid;
+  grid-template-columns: var(--sidebar) 1fr;
+  grid-template-rows: var(--topbar) 1fr;
+  grid-template-areas: "sidebar topbar" "sidebar main";
+  min-height: 100vh;
+}
 
 .sidebar {
+  grid-area: sidebar;
   background: var(--surface);
   border-right: 1px solid var(--line);
-  padding: 20px 16px;
+  padding: 18px 14px;
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 18px;
   position: sticky;
   top: 0;
   height: 100vh;
   overflow-y: auto;
 }
 
-.brand { display: flex; align-items: center; gap: 10px; }
+.brand { display: flex; align-items: center; gap: 10px; padding: 0 4px; }
 .brand-mark {
   width: 32px; height: 32px;
   flex: 0 0 32px;
@@ -278,16 +293,18 @@ a { color: var(--brand); }
   text-transform: uppercase;
   color: var(--ink-faint);
   margin-bottom: 7px;
-  padding-left: 10px;
+  padding-left: 12px;
 }
 
-.nav { display: flex; flex-direction: column; gap: 2px; }
+/* Navegação numerada: cada item carrega o número do passo, não só um glifo decorativo.
+   É o número que comunica ordem, e ordem é a correção central deste redesign. */
+.nav { display: flex; flex-direction: column; gap: 3px; }
 
 .nav-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 9px 11px;
+  gap: 11px;
+  padding: 10px 11px;
   border: 0;
   border-radius: var(--radius-sm);
   background: transparent;
@@ -305,37 +322,113 @@ a { color: var(--brand); }
   color: var(--brand-deep);
   font-weight: 650;
 }
-.nav-item .ico { flex: 0 0 16px; opacity: .85; }
+.nav-item[aria-current="page"] .step-num { background: var(--brand); color: #fff; }
 
-.state-switch { display: flex; flex-direction: column; gap: 6px; }
-.state-switch .seg {
+.step-num {
+  flex: 0 0 22px;
+  width: 22px; height: 22px;
+  border-radius: 999px;
+  background: var(--surface-3);
+  color: var(--ink-soft);
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.nav-item-body { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.nav-item-title { line-height: 1.25; }
+.nav-item-hint {
+  font-size: 10.5px;
+  color: var(--ink-faint);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nav-item[aria-current="page"] .nav-item-hint { color: var(--brand-2); }
+
+.sidebar-foot { margin-top: auto; font-size: 11.5px; color: var(--ink-faint); padding: 0 4px; }
+.sidebar-foot p { margin: 0 0 8px; }
+
+/* ----------------------------------------------------------------------- topbar */
+
+/* Barra de contexto sempre visível: qual inventário, veredito do gate, maturidade. Antes
+   esse contexto só existia dentro da tela de Scorecard, então navegar para outra tela
+   perdia a referência. Agora ela acompanha qualquer view. */
+.topbar {
+  grid-area: topbar;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 0 22px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.topbar-inventory { display: flex; align-items: center; gap: 8px; }
+.topbar-inventory-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.seg {
   display: flex;
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-sm);
   overflow: hidden;
 }
-.state-switch button {
-  flex: 1;
-  padding: 8px 6px;
+.seg button {
+  padding: 7px 13px;
   border: 0;
   background: var(--surface);
   color: var(--ink-soft);
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
   font-family: inherit;
+  white-space: nowrap;
 }
-.state-switch button + button { border-left: 1px solid var(--line-strong); }
-.state-switch button[aria-pressed="true"] { background: var(--brand); color: #fff; }
+.seg button + button { border-left: 1px solid var(--line-strong); }
+.seg button[aria-pressed="true"] { background: var(--brand); color: #fff; }
 
-.sidebar-foot { margin-top: auto; font-size: 11.5px; color: var(--ink-faint); }
-.sidebar-foot p { margin: 0 0 8px; }
+.topbar-status { display: flex; align-items: center; gap: 16px; margin-left: auto; }
+.topbar-gate {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 5px 11px 5px 9px;
+  border-radius: 999px;
+}
+.topbar-gate.pass { background: var(--pass-soft); color: var(--pass); }
+.topbar-gate.fail { background: var(--fail-soft); color: var(--fail); }
+.topbar-maturity { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--ink-soft); }
+.topbar-maturity b { font-size: 15px; color: var(--ink); }
 
 /* -------------------------------------------------------------------------- main */
 
-.main { min-width: 0; padding: 26px 30px 60px; }
+.main { grid-area: main; min-width: 0; padding: 26px 30px 60px; }
 
 .page-head { margin-bottom: 22px; }
+.page-head .step-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--brand);
+  margin-bottom: 8px;
+}
+.page-head .step-tag .step-num { background: var(--brand); color: #fff; }
 .page-head h1 { margin: 0 0 5px; font-size: 22px; letter-spacing: -.01em; }
 .page-head p { margin: 0; color: var(--ink-soft); font-size: 13.5px; max-width: 76ch; }
 
@@ -359,6 +452,70 @@ a { color: var(--brand); }
   box-shadow: var(--shadow-sm);
 }
 .card-pad { padding: 18px 20px; }
+
+/* ------------------------------------------------------------ camada 1: Situação */
+
+/* A primeira tela responde uma pergunta antes de qualquer número: "passa ou não passa".
+   O veredito vem antes dos KPIs, em texto grande, porque é a informação que decide o que
+   fazer a seguir. */
+.verdict-banner {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 24px 26px;
+  border-radius: var(--radius-lg);
+  margin-bottom: 24px;
+  border: 1px solid var(--line);
+}
+.verdict-banner.pass { background: linear-gradient(120deg, var(--pass-soft), var(--surface) 60%); border-color: var(--pass-line); }
+.verdict-banner.fail { background: linear-gradient(120deg, var(--fail-soft), var(--surface) 60%); border-color: var(--fail-line); }
+
+.verdict-banner-icon {
+  flex: 0 0 56px;
+  width: 56px; height: 56px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 26px;
+  font-weight: 700;
+  color: #fff;
+}
+.verdict-banner.pass .verdict-banner-icon { background: var(--pass); }
+.verdict-banner.fail .verdict-banner-icon { background: var(--fail); }
+
+.verdict-banner-title { font-size: 19px; font-weight: 700; margin: 0 0 4px; }
+.verdict-banner-sub { margin: 0; font-size: 13.5px; color: var(--ink-soft); }
+.verdict-banner-cta { margin-left: auto; flex: 0 0 auto; }
+
+.situation-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  margin-bottom: 26px;
+}
+
+.culprit-list { display: flex; flex-direction: column; gap: 10px; }
+.culprit {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 16px;
+  border: 1px solid var(--fail-line);
+  border-left: 3px solid var(--fail);
+  background: var(--fail-soft);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  color: inherit;
+}
+.culprit:hover { background: #fbdde2; }
+.culprit-id { font-weight: 700; color: #8f1e2f; font-size: 13px; white-space: nowrap; }
+.culprit-body { min-width: 0; flex: 1; }
+.culprit-title { font-size: 13px; font-weight: 600; }
+.culprit-practice { font-size: 11.5px; color: var(--ink-soft); margin-top: 1px; }
+.culprit-arrow { color: var(--fail); font-size: 15px; flex: 0 0 auto; }
 
 /* --------------------------------------------------------------------- KPI / topo */
 
@@ -620,6 +777,33 @@ table.matrix tbody th {
 .delta-arrow { color: var(--ink-faint); }
 .delta-states { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
 
+/* ---------------------------------------------------------- camada 5: Simulação */
+
+/* Comparar-dois-estados e o editor-de-cenário respondiam a mesma pergunta em duas telas
+   separadas ("o que muda se"). Aqui viram abas dentro de uma só, porque forçar quem
+   chega a decidir entre "comparar" e "editar cenário" sem contexto dobra o custo de
+   entender o que a tela faz. */
+.sim-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 22px;
+}
+.sim-tab {
+  padding: 10px 16px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  margin-bottom: -1px;
+}
+.sim-tab:hover { color: var(--ink); }
+.sim-tab[aria-selected="true"] { color: var(--brand-deep); border-bottom-color: var(--brand); }
+
 /* ------------------------------------------------------------------ editor cenário */
 
 .editor-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 380px); gap: 18px; align-items: start; }
@@ -642,7 +826,7 @@ table.matrix tbody th {
 .knob-desc { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
 .knob-hits { font-size: 11.5px; color: var(--brand-deep); margin-top: 4px; font-weight: 600; }
 
-.live-panel { position: sticky; top: 26px; }
+.live-panel { position: sticky; top: calc(var(--topbar) + 16px); }
 
 .live-delta {
   font-size: 12.5px;
@@ -654,20 +838,6 @@ table.matrix tbody th {
 }
 .live-delta.worse { border-color: var(--fail-line); background: var(--fail-soft); color: #8f1e2f; }
 .live-delta.better { border-color: var(--pass-line); background: var(--pass-soft); color: var(--pass); }
-
-textarea.json-edit {
-  width: 100%;
-  min-height: 320px;
-  padding: 12px;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius-sm);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 12.5px;
-  line-height: 1.5;
-  background: var(--surface-2);
-  color: var(--ink);
-  resize: vertical;
-}
 
 /* -------------------------------------------------------------------- export/misc */
 
@@ -768,7 +938,11 @@ textarea.json-edit {
 }
 
 @media (max-width: 860px) {
-  .app { grid-template-columns: 1fr; }
+  .app {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto var(--topbar) 1fr;
+    grid-template-areas: "sidebar" "topbar" "main";
+  }
   .sidebar {
     position: static;
     height: auto;
@@ -780,8 +954,13 @@ textarea.json-edit {
     border-bottom: 1px solid var(--line);
   }
   .nav { flex-direction: row; flex-wrap: wrap; }
+  .nav-item-hint { display: none; }
   .nav-group-label, .sidebar-foot { display: none; }
+  .topbar { flex-wrap: wrap; height: auto; padding: 10px 16px; gap: 10px; }
+  .topbar-status { margin-left: 0; }
   .main { padding: 20px 16px 48px; }
+  .verdict-banner { flex-wrap: wrap; }
+  .verdict-banner-cta { margin-left: 0; }
   .practice { grid-template-columns: 1fr; }
   .practice-level { grid-row: auto; grid-column: 1; text-align: left; }
   .compare-head { grid-template-columns: 1fr; }
@@ -798,8 +977,8 @@ textarea.json-edit {
 /* Impressão: o relatório de conformidade é artefato de auditoria, então tem que sair
    legível no papel sem a navegação. */
 @media print {
-  .sidebar, .toolbar, .scenario-actions, .drawer, .drawer-backdrop, .skip-link { display: none !important; }
-  .app { grid-template-columns: 1fr; }
+  .sidebar, .topbar, .toolbar, .scenario-actions, .drawer, .drawer-backdrop, .skip-link { display: none !important; }
+  .app { grid-template-columns: 1fr; grid-template-areas: "main"; }
   body { background: #fff; }
   .card, .kpi, .practice { box-shadow: none; break-inside: avoid; }
 }

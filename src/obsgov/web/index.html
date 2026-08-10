@@ -57,38 +57,57 @@
       </div>
     </div>
 
-    <div class="state-switch">
-      <div class="nav-group-label" id="state-label">Inventário avaliado</div>
-      <div class="seg" role="group" aria-labelledby="state-label">
-        <button type="button" data-state="bad-state" aria-pressed="true">bad-state</button>
-        <button type="button" data-state="good-state" aria-pressed="false">good-state</button>
-      </div>
-    </div>
-
-    <nav aria-label="Seções">
+    <!-- Navegação numerada: a ordem em que a pergunta de conformidade aparece na cabeça
+         de quem avalia. 1 e 2 dizem o que está errado, 3 diz o que fazer, 4 é a pergunta
+         do auditor, 5 é "e se", 6 é a prova para levar embora. -->
+    <nav aria-label="Camadas de avaliação">
       <div class="nav-group-label">Avaliação</div>
       <div class="nav">
-        <button type="button" class="nav-item" data-view="scorecard" aria-current="page">
-          <span class="ico" aria-hidden="true">▤</span> Scorecard
+        <button type="button" class="nav-item" data-view="situation" aria-current="page">
+          <span class="step-num" aria-hidden="true">1</span>
+          <span class="nav-item-body">
+            <span class="nav-item-title">Situação</span>
+            <span class="nav-item-hint">passa ou não passa</span>
+          </span>
+        </button>
+        <button type="button" class="nav-item" data-view="scorecard">
+          <span class="step-num" aria-hidden="true">2</span>
+          <span class="nav-item-body">
+            <span class="nav-item-title">Diagnóstico</span>
+            <span class="nav-item-hint">maturidade por prática</span>
+          </span>
         </button>
         <button type="button" class="nav-item" data-view="controls">
-          <span class="ico" aria-hidden="true">☰</span> Controles
-        </button>
-        <button type="button" class="nav-item" data-view="matrix">
-          <span class="ico" aria-hidden="true">▦</span> Matriz ITIL x COBIT
+          <span class="step-num" aria-hidden="true">3</span>
+          <span class="nav-item-body">
+            <span class="nav-item-title">Remediação</span>
+            <span class="nav-item-hint">o que corrigir primeiro</span>
+          </span>
         </button>
       </div>
 
-      <div class="nav-group-label" style="margin-top:18px">Análise</div>
+      <div class="nav-group-label" style="margin-top:16px">Auditoria</div>
       <div class="nav">
-        <button type="button" class="nav-item" data-view="compare">
-          <span class="ico" aria-hidden="true">⇄</span> Comparar estados
+        <button type="button" class="nav-item" data-view="matrix">
+          <span class="step-num" aria-hidden="true">4</span>
+          <span class="nav-item-body">
+            <span class="nav-item-title">Cobertura</span>
+            <span class="nav-item-hint">ITIL x COBIT, onde falta olhar</span>
+          </span>
         </button>
-        <button type="button" class="nav-item" data-view="scenario">
-          <span class="ico" aria-hidden="true">✎</span> Editor de cenário
+        <button type="button" class="nav-item" data-view="simulation">
+          <span class="step-num" aria-hidden="true">5</span>
+          <span class="nav-item-body">
+            <span class="nav-item-title">Simulação</span>
+            <span class="nav-item-hint">comparar e testar cenário</span>
+          </span>
         </button>
         <button type="button" class="nav-item" data-view="export">
-          <span class="ico" aria-hidden="true">↓</span> Evidência
+          <span class="step-num" aria-hidden="true">6</span>
+          <span class="nav-item-body">
+            <span class="nav-item-title">Evidência</span>
+            <span class="nav-item-hint">o pacote para o auditor</span>
+          </span>
         </button>
       </div>
     </nav>
@@ -98,6 +117,20 @@
       <button type="button" id="logout" class="btn">Sair</button>
     </div>
   </aside>
+
+  <!-- Contexto sempre visível: qual inventário, veredito, maturidade. Some da sidebar
+       (onde parecia configuração) e acompanha toda navegação, porque é a referência que
+       se perdia ao trocar de tela. -->
+  <header class="topbar">
+    <div class="topbar-inventory">
+      <span class="topbar-inventory-label" id="state-label">Inventário</span>
+      <div class="seg" role="group" aria-labelledby="state-label">
+        <button type="button" data-state="bad-state" aria-pressed="true">Com lacunas</button>
+        <button type="button" data-state="good-state" aria-pressed="false">Maduro</button>
+      </div>
+    </div>
+    <div class="topbar-status" id="topbar-status"></div>
+  </header>
 
   <main class="main" id="main">
     <div id="view" aria-live="polite" aria-busy="false"></div>

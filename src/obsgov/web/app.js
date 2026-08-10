@@ -7,7 +7,14 @@
 
    Toda interpolação de texto vindo de dado passa por esc(). O dataset é sintético e
    local, mas o editor de cenário aceita entrada do usuário e devolve para a tela, então
-   escapar não é opcional. */
+   escapar não é opcional.
+
+   Navegação em seis camadas, na ordem em que a pergunta de conformidade aparece:
+   1 Situação (passa ou não passa), 2 Diagnóstico (por que), 3 Remediação (o que fazer),
+   4 Cobertura (onde não se está olhando), 5 Simulação (e se), 6 Evidência (a prova).
+   Comparar-dois-estados e Editor-de-cenário viraram abas dentro da camada 5: as duas
+   respondem "o que muda se", e forçar a decidir entre elas sem contexto dobrava o custo
+   de entender a tela. */
 
 "use strict";
 
@@ -25,8 +32,9 @@ const VERDICT_HELP = {
 };
 
 const state = {
-  view: "scorecard",
+  view: "situation",
   stateName: "bad-state",
+  simTab: "compare",
   data: {},
   filters: { q: "", verdicts: new Set(), severities: new Set() },
   scenario: null,
@@ -86,21 +94,49 @@ function practiceLabel(name) {
   return name.replace(/-/g, " ");
 }
 
-/* --------------------------------------------------------------------- telas */
+function stepTag(number, label) {
+  return `<span class="step-tag"><span class="step-num" aria-hidden="true">${number}</span>${esc(label)}</span>`;
+}
 
-function renderScorecard(d) {
+/* --------------------------------------------------------- camada 1: Situação */
+
+/* A primeira tela responde a única pergunta que importa antes de qualquer detalhe:
+   este inventário passa no gate de CI ou não. O veredito vem em texto grande, os
+   controles causadores vêm nomeados e clicáveis, e só depois disso aparece qualquer
+   número decomposto. Quem chega na demo por 30 segundos sai sabendo o que travou. */
+function renderSituation(d) {
   const capped = d.practices.filter((p) => p.ceiling_control);
-  const skipTotal = d.counts.SKIP || 0;
+  const gatePass = d.musts_failed.length === 0;
+  const culprits = d.practices.filter((p) => p.ceiling_control);
 
   return `
   <div class="page-head">
-    <h1>Scorecard de conformidade</h1>
-    <p>Maturidade por prática ITIL, medida contra o inventário declarado
-       <code>${esc(d.state)}</code>. Onde uma prática está travada, o controle
-       obrigatório responsável aparece nomeado.</p>
+    ${stepTag(1, "Situação")}
+    <h1>Este inventário passa no gate?</h1>
+    <p>A primeira pergunta que importa, respondida antes de qualquer detalhe. O gate de
+       CI usa exatamente este critério: <code>obsgov validate</code> sai com código 1 se
+       qualquer controle <strong>MUST</strong> reprovar.</p>
   </div>
 
-  <div class="kpis">
+  <div class="verdict-banner ${gatePass ? "pass" : "fail"}">
+    <div class="verdict-banner-icon" aria-hidden="true">${gatePass ? GLYPH.PASS : GLYPH.FAIL}</div>
+    <div>
+      <p class="verdict-banner-title">
+        ${gatePass ? "Gate passa" : `Gate reprova: ${d.musts_failed.length} controle(s) MUST em FAIL`}
+      </p>
+      <p class="verdict-banner-sub">
+        ${gatePass
+          ? `Maturidade geral ${esc(d.overall_maturity)} de 5, sobre o inventário `
+          : `${capped.length} prática(s) travada(s) no nível 1 pela regra de teto, sobre o inventário `}
+        <code>${esc(d.state)}</code>.
+      </p>
+    </div>
+    ${!gatePass ? `<div class="verdict-banner-cta">
+      <button type="button" class="btn btn-primary" data-goto="controls">Ver remediação</button>
+    </div>` : ""}
+  </div>
+
+  <div class="situation-grid">
     <div class="kpi kpi-hero">
       <div class="kpi-label">Maturidade geral</div>
       <div class="kpi-value">${esc(d.overall_maturity)}<small> / 5</small></div>
@@ -112,23 +148,56 @@ function renderScorecard(d) {
       <div class="kpi-foot counts">${countsRow(d.counts)}</div>
     </div>
     <div class="kpi">
-      <div class="kpi-label">MUST reprovados</div>
-      <div class="kpi-value" style="color:${d.musts_failed.length ? "var(--fail)" : "var(--pass)"}">
-        ${d.musts_failed.length}</div>
-      <div class="kpi-foot">${d.musts_failed.length
-        ? "gate de CI não passa"
-        : "gate de CI passa"}</div>
-    </div>
-    <div class="kpi">
       <div class="kpi-label">Práticas travadas</div>
       <div class="kpi-value" style="color:${capped.length ? "var(--fail)" : "var(--pass)"}">
         ${capped.length}</div>
-      <div class="kpi-foot">pela regra de teto</div>
+      <div class="kpi-foot">de ${d.practices.length}, pela regra de teto</div>
     </div>
   </div>
 
-  ${skipTotal > 0 ? `
+  ${culprits.length ? `
   <div class="section">
+    <h2>O que está travando</h2>
+    <p class="section-hint">Cada prática abaixo está limitada ao nível 1 por um único
+       controle MUST reprovado, não importa quantos outros controles dela passem. Clique
+       para ver a evidência.</p>
+    <div class="culprit-list">
+      ${culprits.map((p) => `
+        <button type="button" class="culprit" data-open-control="${esc(p.ceiling_control)}">
+          <span class="culprit-id">${esc(p.ceiling_control)}</span>
+          <span class="culprit-body">
+            <span class="culprit-title">trava ${esc(practiceLabel(p.practice))} no nível 1</span>
+            <span class="culprit-practice">nível atual ${p.level} de 5</span>
+          </span>
+          <span class="culprit-arrow" aria-hidden="true">&rarr;</span>
+        </button>`).join("")}
+    </div>
+  </div>` : `
+  <div class="section">
+    <div class="notice">
+      <strong>Nenhum MUST reprovado.</strong> O gate passa. Veja o diagnóstico completo
+      por prática na camada 2, ou simule o que quebra o gate na camada 5.
+    </div>
+  </div>`}`;
+}
+
+/* --------------------------------------------------------- camada 2: Diagnóstico */
+
+function renderScorecard(d) {
+  const capped = d.practices.filter((p) => p.ceiling_control);
+  const skipTotal = d.counts.SKIP || 0;
+
+  return `
+  <div class="page-head">
+    ${stepTag(2, "Diagnóstico")}
+    <h1>Maturidade por prática</h1>
+    <p>Nível de cada prática ITIL, medida contra o inventário declarado
+       <code>${esc(d.state)}</code>. Onde uma prática está travada, o controle
+       obrigatório responsável aparece nomeado.</p>
+  </div>
+
+  ${skipTotal > 0 ? `
+  <div class="section" style="margin-top:0">
     <div class="notice">
       <strong>${skipTotal} controle(s) em SKIP não contam como aprovação.</strong>
       Um SKIP significa que o pré-requisito do controle não foi satisfeito, então não há
@@ -137,8 +206,7 @@ function renderScorecard(d) {
     </div>
   </div>` : ""}
 
-  <div class="section">
-    <h2>Maturidade por prática</h2>
+  <div class="section" style="margin-top:22px">
     <p class="section-hint">A escala vai de 0 (nem declaração existe) a 5 (o próprio
        catálogo de controle é revisado por evidência). Um único MUST reprovado limita a
        prática ao nível 1, independente de quantos SHOULD e MAY passem.</p>
@@ -175,6 +243,8 @@ function renderScorecard(d) {
   </div>`;
 }
 
+/* ---------------------------------------------------------- camada 3: Remediação */
+
 function renderControls(rows) {
   const f = state.filters;
   const visible = rows.filter((r) => {
@@ -187,6 +257,7 @@ function renderControls(rows) {
 
   return `
   <div class="page-head">
+    ${stepTag(3, "Remediação")}
     <h1>Controles</h1>
     <p>Cada linha é um controle com verificação automatizada. Clique para ver a evidência
        crua que o motor coletou e a remediação sugerida.</p>
@@ -240,9 +311,12 @@ function renderControls(rows) {
   </div>`;
 }
 
+/* ------------------------------------------------------------ camada 4: Cobertura */
+
 function renderMatrix(d) {
   return `
   <div class="page-head">
+    ${stepTag(4, "Cobertura")}
     <h1>Matriz ITIL x COBIT</h1>
     <p>Cobertura de práticas ITIL 4 contra objetivos COBIT 2019. A célula mostra o pior
        verdict do cruzamento, porque um FAIL não deve desaparecer numa média.</p>
@@ -296,21 +370,16 @@ function renderMatrix(d) {
   </div>`;
 }
 
-function renderCompare(d) {
+/* ------------------------------------------------------------- camada 5: Simulação */
+
+function renderCompareTab(d) {
   if (!d.available) {
-    return `<div class="page-head"><h1>Comparar estados</h1></div>
-      <div class="empty">Os dois fixtures precisam existir para comparar.</div>`;
+    return `<div class="empty">Os dois fixtures precisam existir para comparar.</div>`;
   }
 
   const changed = d.controls.filter((c) => c.changed);
 
   return `
-  <div class="page-head">
-    <h1>Comparar estados</h1>
-    <p>Os mesmos três serviços declarados em dois estados. O estado ruim não é quebrado
-       ao acaso: cada gap vem de um modo de falha real de arquitetura.</p>
-  </div>
-
   <div class="card card-pad">
     <div class="compare-head">
       <div>
@@ -411,19 +480,12 @@ const KNOBS = [
   },
 ];
 
-function renderScenario() {
+function renderScenarioTab() {
   const sc = state.scenario;
   const base = state.scenarioBaseline;
   const delta = sc && base ? Number((sc.overall_maturity - base.overall_maturity).toFixed(2)) : 0;
 
   return `
-  <div class="page-head">
-    <h1>Editor de cenário</h1>
-    <p>Mude a configuração declarada e veja o verdict e a maturidade se moverem na hora.
-       A avaliação roda no servidor, sobre o inventário que esta tela envia, então nada
-       aqui altera o fixture no disco.</p>
-  </div>
-
   <div class="notice" style="margin-bottom:16px">
     <strong>Comece marcando "Remover a referência de runbook do alerta que pagina".</strong>
     O <code>INC-001</code> fica vermelho e a prática <em>incident management</em> despenca
@@ -501,7 +563,53 @@ function renderScenario() {
   </div>` : ""}`;
 }
 
-function renderExport(d) {
+function renderSimulation() {
+  return `
+  <div class="page-head">
+    ${stepTag(5, "Simulação")}
+    <h1>O que muda se</h1>
+    <p>Duas formas de responder a mesma pergunta: comparar dois inventários já avaliados,
+       ou editar um deles ao vivo e ver o verdict se mover na hora.</p>
+  </div>
+
+  <div class="sim-tabs" role="tablist" aria-label="Modo de simulação">
+    <button type="button" class="sim-tab" role="tab" data-sim="compare"
+            aria-selected="${state.simTab === "compare"}">Comparar dois estados</button>
+    <button type="button" class="sim-tab" role="tab" data-sim="scenario"
+            aria-selected="${state.simTab === "scenario"}">Editor de cenário</button>
+  </div>
+
+  <div id="sim-body"></div>`;
+}
+
+async function loadSimTab() {
+  const host = document.getElementById("sim-body");
+  if (!host) return;
+  if (state.simTab === "compare") {
+    const d = await api("/api/compare");
+    host.innerHTML = renderCompareTab(d);
+  } else {
+    await ensureScenario();
+    host.innerHTML = renderScenarioTab();
+    wireScenario();
+  }
+}
+
+function wireSimTabs() {
+  document.querySelectorAll(".sim-tab").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      state.simTab = btn.dataset.sim;
+      document.querySelectorAll(".sim-tab").forEach((b) => {
+        b.setAttribute("aria-selected", String(b.dataset.sim === state.simTab));
+      });
+      loadSimTab();
+    });
+  });
+}
+
+/* --------------------------------------------------------------- camada 6: Evidência */
+
+function renderExport() {
   const formats = [
     { fmt: "md", name: "Markdown", desc: "O relatório para um humano ler no PR ou anexar num parecer." },
     { fmt: "json", name: "JSON", desc: "O par legível por máquina, e a origem do maturity_history da próxima execução." },
@@ -510,6 +618,7 @@ function renderExport(d) {
 
   return `
   <div class="page-head">
+    ${stepTag(6, "Evidência")}
     <h1>Pacote de evidência</h1>
     <p>O artefato que se entrega a um auditor: verdict por controle, evidência coletada e
        remediação, no formato que o destinatário consome.</p>
@@ -593,6 +702,28 @@ function closeDrawer() {
   document.getElementById("drawer").hidden = true;
 }
 
+/* ------------------------------------------------------------------ topbar de contexto */
+
+/* Barra de contexto sempre visível, independente da view atual. Antes o veredito e a
+   maturidade só existiam dentro da tela de Scorecard, então trocar de tela perdia a
+   referência de "estou avaliando o quê, e está passando?". */
+async function refreshTopbar() {
+  const host = document.getElementById("topbar-status");
+  if (!host) return;
+  try {
+    const d = await api(`/api/state/${encodeURIComponent(state.stateName)}/scorecard`);
+    const gatePass = d.musts_failed.length === 0;
+    host.innerHTML = `
+      <span class="topbar-gate ${gatePass ? "pass" : "fail"}">
+        <span aria-hidden="true">${gatePass ? GLYPH.PASS : GLYPH.FAIL}</span>
+        gate ${gatePass ? "passa" : "reprova"}
+      </span>
+      <span class="topbar-maturity">maturidade <b>${esc(d.overall_maturity)}</b> / 5</span>`;
+  } catch {
+    host.innerHTML = "";
+  }
+}
+
 /* ---------------------------------------------------------------- orquestração */
 
 async function loadView() {
@@ -600,7 +731,11 @@ async function loadView() {
   host.setAttribute("aria-busy", "true");
 
   try {
-    if (state.view === "scorecard") {
+    if (state.view === "situation") {
+      const d = await api(`/api/state/${encodeURIComponent(state.stateName)}/scorecard`);
+      host.innerHTML = renderSituation(d);
+      wireSituation();
+    } else if (state.view === "scorecard") {
       const d = await api(`/api/state/${encodeURIComponent(state.stateName)}/scorecard`);
       host.innerHTML = renderScorecard(d);
     } else if (state.view === "controls") {
@@ -611,13 +746,10 @@ async function loadView() {
     } else if (state.view === "matrix") {
       const d = await api(`/api/state/${encodeURIComponent(state.stateName)}/matrix`);
       host.innerHTML = renderMatrix(d);
-    } else if (state.view === "compare") {
-      const d = await api("/api/compare");
-      host.innerHTML = renderCompare(d);
-    } else if (state.view === "scenario") {
-      await ensureScenario();
-      host.innerHTML = renderScenario();
-      wireScenario();
+    } else if (state.view === "simulation") {
+      host.innerHTML = renderSimulation();
+      wireSimTabs();
+      await loadSimTab();
     } else if (state.view === "export") {
       host.innerHTML = renderExport();
     }
@@ -626,6 +758,17 @@ async function loadView() {
   } finally {
     host.setAttribute("aria-busy", "false");
   }
+
+  refreshTopbar();
+}
+
+function wireSituation() {
+  document.querySelectorAll("[data-goto]").forEach((btn) => {
+    btn.addEventListener("click", () => setView(btn.dataset.goto));
+  });
+  document.querySelectorAll("[data-open-control]").forEach((btn) => {
+    btn.addEventListener("click", () => openDrawer(btn.dataset.openControl));
+  });
 }
 
 function wireControls() {
@@ -689,7 +832,8 @@ async function applyKnobs() {
   const inv = structuredClone(state.scenarioSource);
   KNOBS.filter((k) => state.knobsOn.has(k.id)).forEach((k) => k.apply(inv));
   state.scenario = await api("/api/evaluate", { method: "POST", body: JSON.stringify(inv) });
-  document.getElementById("view").innerHTML = renderScenario();
+  const host = document.getElementById("sim-body");
+  if (host) host.innerHTML = renderScenarioTab();
   wireScenario();
 }
 
