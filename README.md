@@ -101,7 +101,7 @@ formato.
 
 ```mermaid
 flowchart LR
-    subgraph fontes["Fontes declaradas (JSON versionado)"]
+    subgraph fontes["Fontes declaradas, JSON versionado"]
         SC["service-catalog<br/>serviço, tier, dono, sinais"]
         SLO["slo<br/>SLI, alvo, janela, error budget"]
         ALR["alerts<br/>regra, severidade, runbook"]
@@ -109,22 +109,32 @@ flowchart LR
         CL["change-log<br/>problema, mudança, watchdog"]
     end
 
+    WAIV["waivers.json<br/>dono e validade"]
     LOAD["loader<br/>valida e monta"]
     INV["Inventory"]
     EVAL["evaluator<br/>30 controles puros"]
-    RES["ControlResult<br/>PASS · FAIL · SKIP · WAIVED"]
+    RES["ControlResult<br/>PASS, FAIL, SKIP, WAIVED"]
     SCORE["score_practice<br/>regra de teto"]
 
     subgraph saidas["Saídas"]
         GATE["obsgov validate<br/>exit 1 em MUST reprovado"]
         WEB["obsgov serve<br/>dashboard"]
-        REP["obsgov report<br/>markdown · JSON · SARIF"]
+        REP["obsgov report<br/>markdown, JSON, SARIF"]
     end
 
-    fontes --> LOAD --> INV --> EVAL --> RES --> SCORE
-    SCORE --> GATE & WEB & REP
-
-    WAIV["waivers.json<br/>dono e validade"] -.-> EVAL
+    SC --> LOAD
+    SLO --> LOAD
+    ALR --> LOAD
+    RB --> LOAD
+    CL --> LOAD
+    LOAD --> INV
+    INV --> EVAL
+    WAIV -.-> EVAL
+    EVAL --> RES
+    RES --> SCORE
+    SCORE --> GATE
+    SCORE --> WEB
+    SCORE --> REP
 ```
 
 O ponto de desenho que sustenta a tese: cada controle é uma função pura
@@ -147,9 +157,8 @@ flowchart TD
     Q4 -->|sim| L4["nível 4<br/>com tendência medida"]
     Q4 -->|não| L3
 
-    CAP:::fail
-    L1:::fail
     classDef fail fill:#fdeaed,stroke:#c4283f,color:#8f1e2f
+    class CAP,L1 fail
 ```
 
 Vinte caixinhas verdes não vencem uma obrigatória quebrada. Um score que não consegue

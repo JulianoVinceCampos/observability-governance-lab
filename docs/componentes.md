@@ -6,20 +6,20 @@ Os componentes, um diagrama por pergunta, e o que cada aresta garante.
 
 ```mermaid
 flowchart TB
-    subgraph decl["Fonte declarada (versionada, read-only)"]
-        JSON[("5 arquivos JSON<br/>service-catalog · slo · alerts<br/>runbooks · change-log")]
+    subgraph decl["Fonte declarada, versionada e read-only"]
+        JSON[("5 arquivos JSON<br/>service-catalog, slo, alerts<br/>runbooks, change-log")]
     end
 
-    subgraph pkg["Pacote obsgov (zero dependência de runtime)"]
-        LOADER["loader<br/>JSON → Inventory<br/>LoaderError em fonte quebrada"]
+    subgraph pkg["Pacote obsgov, zero dependência de runtime"]
+        LOADER["loader<br/>JSON para Inventory<br/>LoaderError em fonte quebrada"]
         MODEL["model<br/>dataclasses frozen"]
-        EVAL["evaluator<br/>CONTROLS + evaluate + score"]
-        REPORT["report<br/>markdown · JSON · SARIF"]
-        CLI["cli<br/>validate · score · report · serve"]
-        WEBAPP["webapp<br/>http.server + hmac"]
+        EVAL["evaluator<br/>CONTROLS, evaluate e score"]
+        REPORT["report<br/>markdown, JSON, SARIF"]
+        CLI["cli<br/>validate, score, report, serve"]
+        WEBAPP["webapp<br/>http.server e hmac"]
     end
 
-    subgraph web["Bundle web (sem build step, sem CDN)"]
+    subgraph web["Bundle web, sem build step e sem CDN"]
         HTML["index.html"]
         JS["app.js"]
         CSS["styles.css"]
@@ -31,16 +31,20 @@ flowchart TB
         AUDITOR["auditor<br/>pacote de evidência"]
     end
 
-    JSON --> LOADER --> MODEL --> EVAL
+    JSON --> LOADER
+    LOADER --> MODEL
+    MODEL --> EVAL
     EVAL --> REPORT
     CLI --> LOADER
     CLI --> EVAL
     CLI --> REPORT
     CLI --> WEBAPP
     WEBAPP --> EVAL
-    WEBAPP --> web
+    WEBAPP --> HTML
+    HTML --> JS
+    HTML --> CSS
     CLI --> CI
-    web --> HUMANO
+    HTML --> HUMANO
     REPORT --> AUDITOR
 ```
 
@@ -66,7 +70,7 @@ sequenceDiagram
     participant A as AppState
     participant E as evaluator
 
-    Note over A: startup: os dois fixtures são<br/>carregados e avaliados uma vez
+    Note over A: no startup os dois fixtures são<br/>carregados e avaliados uma vez
     B->>H: POST /api/login
     H->>H: compare_digest nos dois campos
     H-->>B: Set-Cookie HttpOnly SameSite=Strict<br/>user.expiry.signature
@@ -75,11 +79,11 @@ sequenceDiagram
     A-->>H: ControlResult + PracticeScore
     H-->>B: JSON
 
-    Note over B,E: editor de cenário: avalia sob demanda,<br/>sem tocar o estado do processo
+    Note over B,E: no editor de cenário a avaliação é sob demanda,<br/>sem tocar o estado do processo
     B->>H: GET /api/state/good-state/inventory
     H-->>B: inventário serializado
     B->>B: aplica a mutação escolhida
-    B->>H: POST /api/evaluate (inventário no corpo)
+    B->>H: POST /api/evaluate com o inventário no corpo
     H->>E: evaluate(Inventory montado do corpo)
     E-->>H: verdict novo
     H-->>B: scorecard do cenário
